@@ -1,5 +1,6 @@
 MAX_LENGTH = 60
 EMBEDDING_SIZE = 64
+NUM_CAPTIONS_PER_SCENE = 10
 
 function encode(batchofenvs)
     images, captions, cameras = getdata(batchofenvs)
@@ -30,27 +31,7 @@ end
 # vocab: dictionary of known words
 # pads or cuts the sentence to a specified length of words, performs embeddings
 # output_size = 10-el array of 64xMAX_LENGTH
-function arrange(batchofcaptions, vocab)
-    int_batchofcaptions = []
-    for i in 1:BATCH_SIZE
-        int_captions = []
-        captions = batchofcaptions[i,:]
-        for c in captions
-            int_cap = []
-            str = split(c, " ")
-            for i in 1:MAX_LENGTH
-               if i <= length(str)
-                    push!(int_cap, get!(vocab, str[i], KnetArray(Knet.xavier(EMBEDDING_SIZE))))
-                else
-                    push!(int_cap, get!(vocab, "", vocab[""])) # padding, same embedding with whitespace
-                end
-            end
-            push!(int_captions, hcat(int_cap...))
-        end
-        push!(int_batchofcaptions, int_captions)
-    end
-    return int_batchofcaptions
-end
+
 
 
 # performs convolution operation through a neural network
