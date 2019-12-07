@@ -78,7 +78,7 @@ function updatevocabs!(vocabid, vocab, w)
         if size(vocab,2) == length(vocabid)
             #println("Vocab and vocabid are in order!")
             vocabid[w] = length(vocabid)+1
-            vocab = hcat(vocab, KnetArray(Knet.xavier(EMBEDDING_SIZE)))
+            vocab = hcat(vocab, KnetArray{Float32}(Knet.xavier(EMBEDDING_SIZE)))
             return vocabid, vocab
         else
             return nothing
