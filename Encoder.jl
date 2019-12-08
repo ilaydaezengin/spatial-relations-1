@@ -62,31 +62,25 @@ function aggregate(h) # batch of h s
     return hcat(r...)
 end
 
-function getembed(vocabid, vocab, w)
-    if haskey(vocabid, w)
-        return vocab[:,vocabid[w]]
+function getembed(c::Corpus, w)
+    if haskey(c.vocabid, w)
+        return value(c.vocab)[:,c.vocabid[w]]
     else
         println("There is no such word in the vocab!!!!")
     end
 end
 
-function updatevocabs!(vocabid, vocab, w)
-    if haskey(vocabid, w)
-        #println("This word already exists...")
-        return vocabid, vocab
-    else
-        if size(vocab,2) == length(vocabid)
+function updatevocabs!(c::Corpus, w)
+    if !haskey(c.vocabid, w)
+        if size(c.vocab,2) == length(c.vocabid)
             #println("Vocab and vocabid are in order!")
-            vocabid[w] = length(vocabid)+1
-            vocab = hcat(vocab, KnetArray{Float32}(Knet.xavier(EMBEDDING_SIZE)))
-            return vocabid, vocab
-        else
-            return nothing
+            c.vocabid[w] = length(c.vocabid)+1
+            c.vocab = param(hcat(value(c.vocab), KnetArray{Float32}(Knet.xavier(EMBEDDING_SIZE))))
         end
     end    
 end
 
-function arrange(batchofcaptions, vocabid, vocab)
+function arrange(batchofcaptions, co::Corpus)
     int_batchofcaptions = []
     for i in 1:BATCH_SIZE
         int_captions = []
@@ -96,17 +90,17 @@ function arrange(batchofcaptions, vocabid, vocab)
             str = split(c, " ")
             for i in 1:MAX_LENGTH
                if i <= length(str)
-                    vocabid, vocab = updatevocabs!(vocabid, vocab, str[i])
-                    push!(int_cap, getembed(vocabid, vocab, str[i])) #KnetArray(Knet.xavier(EMBEDDING_SIZE))
+                    updatevocabs!(co, str[i])
+                    push!(int_cap, getembed(co, str[i])) #KnetArray(Knet.xavier(EMBEDDING_SIZE))
                 else
-                    push!(int_cap, getembed(vocabid, vocab, "")) # padding, same embedding with whitespace
+                    push!(int_cap, getembed(co, "")) # padding, same embedding with whitespace
                 end
             end
             push!(int_captions, hcat(int_cap...))
         end
         push!(int_batchofcaptions, int_captions)
     end
-    return vocabid, vocab, int_batchofcaptions
+    return int_batchofcaptions
 end
 
 function build_angles(tuplebatch)
@@ -137,4 +131,10 @@ function createimgencinput(images) # images size: 50×10×128×128×3
         push!(out, permutedims(images[i,1:9,:,:,:], (2,3,4,1)))
     end
     return cat(out..., dims=4)
+end
+
+
+function creategoldimg(images)
+    unseen_img = pool(permutedims(images[:,10,:,:,:], (2,3,4,1)), window=4, stride=4) # shall the batchsize be in the end
+    return unseen_img
 end
